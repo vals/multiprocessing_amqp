@@ -20,7 +20,7 @@ def p(_):
 with m_handler:
     log.info("Start {}".format(os.getpid()))
 
-    pool = multiprocessing.Pool(multiprocessing.cpu_count())
+    pool = multiprocessing.Pool(4)
 
     r = pool.imap_unordered(p, range(4))
 
