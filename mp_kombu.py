@@ -2,37 +2,50 @@ import multiprocessing
 import os
 
 import kombu
+from kombu.pools import connections
 
-logger = multiprocessing.log_to_stderr()
-logger.setLevel(multiprocessing.SUBDEBUG)
+# logger = multiprocessing.log_to_stderr()
+# logger.setLevel(multiprocessing.SUBDEBUG)
 
 connection = kombu.Connection('amqp://guest:guest@localhost//')
-queue = connection.SimpleQueue('messaging')
+con_pool = connections[connection]
+
 
 parent = os.getpid()
 
+messages = set()
+
 
 def p(_):
-    s = "{} - {}: Starting loop".format(parent, os.getpid())
-    print(s)
-    queue.put(s)
+    with con_pool.acquire() as c:
+        queue = c.SimpleQueue('messaging')
 
-    for i in range(4):
-        s = "{} - {}: {}".format(parent, os.getpid(), i)
+        s = "{} - {}: Starting loop".format(parent, os.getpid())
         print(s)
         queue.put(s)
+        messages.add(s)
 
-    s = "{} - {}: Ending loop".format(parent, os.getpid())
-    print(s)
-    queue.put(s)
+        for i in range(4):
+            s = "{} - {}: {}".format(parent, os.getpid(), i)
+            print(s)
+            queue.put(s)
+            messages.add(s)
+
+        s = "{} - {}: Ending loop".format(parent, os.getpid())
+        print(s)
+        queue.put(s)
+        messages.add(s)
+
+        queue.close()
 
 
-pool = multiprocessing.Pool(2)
+pool = multiprocessing.Pool(16)
 
-r = pool.imap_unordered(p, range(4))
+r = pool.imap_unordered(p, range(64))
 
 for i in r:
     pass
 
+print(len(messages))
+
 pool.terminate()
-queue.close()

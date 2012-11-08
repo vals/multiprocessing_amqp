@@ -31,7 +31,7 @@ def p(_):
     print(s)
     channel.basic_publish(exchange=name, routing_key=name, body=s)
 
-pool = multiprocessing.Pool(2)
+pool = multiprocessing.Pool(1)
 
 r = pool.imap_unordered(p, range(4))
 
